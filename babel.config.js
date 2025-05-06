@@ -1,20 +1,28 @@
 module.exports = (api) => {
-  api.cache(true)
+  api.cache(true);
   return {
-    presets: [['babel-preset-expo', { jsxRuntime: 'automatic' }]],
+    presets: [["babel-preset-expo", { jsxRuntime: "automatic" }]],
     plugins: [
       [
-        '@tamagui/babel-plugin',
+        "module-resolver",
         {
-          components: ['tamagui'],
-          config: './tamagui.config.ts',
+          alias: {
+            stream: "stream-browserify",
+          },
+        },
+      ],
+      [
+        "@tamagui/babel-plugin",
+        {
+          components: ["tamagui"],
+          config: "./tamagui.config.ts",
           logTimings: true,
-          disableExtraction: process.env.NODE_ENV === 'development',
+          disableExtraction: process.env.NODE_ENV === "development",
         },
       ],
 
       // NOTE: this is only necessary if you are using reanimated for animations
-      'react-native-reanimated/plugin',
+      "react-native-reanimated/plugin",
     ],
-  }
-}
+  };
+};

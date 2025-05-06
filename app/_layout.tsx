@@ -1,5 +1,3 @@
-import "react-native-get-random-values";
-
 import { useEffect } from "react";
 import { StatusBar, useColorScheme } from "react-native";
 import {
@@ -11,9 +9,7 @@ import { useFonts } from "expo-font";
 import { SplashScreen, Stack } from "expo-router";
 import { Provider } from "../components/Provider";
 import { useTheme } from "tamagui";
-import { install } from "react-native-quick-crypto";
-
-install();
+import useWallet from "hooks/useWallet";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -59,12 +55,14 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const theme = useTheme();
+  const { walletExists } = useWallet();
+
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <StatusBar
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
       />
-      <Stack>
+      <Stack initialRouteName={walletExists ? "overview" : "(onboarding)"}>
         <Stack.Screen
           name="(onboarding)"
           options={{
