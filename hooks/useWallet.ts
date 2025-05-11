@@ -2,12 +2,14 @@ import { useMemo } from "react";
 import usePersistState from "./usePersistState";
 import bs58 from "bs58";
 import {
+  Connection,
   Keypair,
   type Transaction,
   VersionedTransaction,
 } from "@solana/web3.js";
 import { useToastController } from "@tamagui/toast";
 import { deriveSolanaKeypair, generateMnemonic } from "utils";
+import { tryAsync } from "try.rs";
 
 export default function useWallet() {
   const [mnemonic, setMnemonic] = usePersistState<string | undefined>(
@@ -94,8 +96,46 @@ export default function useWallet() {
     return tx;
   }
 
+  async function sendTransaction(tx: VersionedTransaction | Transaction) {
+    if (!keyPair) {
+      throw new Error("Wallet not initialized");
+    }
+
+    const connection = new Connection(
+      process.env.EXPO_PUBLIC_RPC_URL as string,
+    );
+
+    const txSignature = await tryAsync(
+      async () => await connection.sendRawTransaction(tx.serialize()),
+    );
+
+    if (txSignature.error) {
+      console.error("Error sending transaction:", txSignature.error);
+      toast.show("Error sending transaction", {
+        customData: { type: "error" },
+      });
+      return;
+    }
+
+    const txState = await tryAsync(
+      async () =>
+        await connection.confirmTransaction(txSignature.value, "confirmed"),
+    );
+
+    if (txState.error) {
+      console.error("Error confirming transaction:", txState.error);
+      toast.show("Error confirming transaction", {
+        customData: { type: "error" },
+      });
+      return;
+    }
+
+    return txState.value.value;
+  }
+
   return {
     signTransaction,
+    sendTransaction,
     mnemonic,
     setMnemonic,
     setPrivateKey,

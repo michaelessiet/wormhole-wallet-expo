@@ -50,6 +50,7 @@
     "expo-status-bar": "~2.2.3",
     "expo-system-ui": "~5.0.7",
     "expo-web-browser": "~14.1.6",
+    "gill": "^0.9.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.2",
@@ -64,7 +65,8 @@
     "react-native-svg": "15.11.2",
     "react-native-web": "^0.20.0",
     "stream-browserify": "^3.0.0",
-    "tamagui": "^1.126.7"
+    "tamagui": "^1.126.7",
+    "try.rs": "^0.1.2"
   },
   "devDependencies": {
     "@babel/core": "^7.24.6",
