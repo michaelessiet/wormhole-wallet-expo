@@ -1,12 +1,15 @@
 import { Button, Text, YStack } from "tamagui";
 import { Route } from "@tamagui/lucide-icons";
-import { useToastController } from "@tamagui/toast";
 import useWallet from "hooks/useWallet";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 
 export default function Onboarding() {
   const router = useRouter();
-  const { generateWallet } = useWallet();
+  const { generateWallet, walletExists } = useWallet();
+
+  if (walletExists) {
+    return <Redirect href={"/overview"} />;
+  }
 
   return (
     <YStack justify={"center"} items={"center"} height={"100%"} gap={"$9"}>
@@ -39,7 +42,7 @@ export default function Onboarding() {
           const isWalletGenerated = generateWallet();
 
           if (isWalletGenerated) {
-            router.push("/overview");
+            router.replace("/overview");
           }
         }}
       >

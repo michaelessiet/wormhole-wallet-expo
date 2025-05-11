@@ -1,7 +1,11 @@
 import { useMemo } from "react";
 import usePersistState from "./usePersistState";
 import bs58 from "bs58";
-import { Keypair } from "@solana/web3.js";
+import {
+  Keypair,
+  type Transaction,
+  VersionedTransaction,
+} from "@solana/web3.js";
 import { useToastController } from "@tamagui/toast";
 import { deriveSolanaKeypair, generateMnemonic } from "utils";
 
@@ -76,7 +80,22 @@ export default function useWallet() {
     }
   }
 
+  function signTransaction(tx: VersionedTransaction | Transaction) {
+    if (!keyPair) {
+      throw new Error("Wallet not initialized");
+    }
+
+    if (tx instanceof VersionedTransaction) {
+      tx.sign([keyPair]);
+    } else {
+      tx.partialSign(keyPair);
+    }
+
+    return tx;
+  }
+
   return {
+    signTransaction,
     mnemonic,
     setMnemonic,
     setPrivateKey,

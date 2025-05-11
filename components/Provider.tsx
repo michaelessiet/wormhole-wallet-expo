@@ -3,6 +3,23 @@ import { TamaguiProvider, type TamaguiProviderProps } from "tamagui";
 import { ToastProvider, ToastViewport } from "@tamagui/toast";
 import { CurrentToast } from "./CurrentToast";
 import { config } from "../tamagui.config";
+import { QueryClient } from "@tanstack/react-query";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import storage from "store/storage";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
+    },
+  },
+});
+
+const syncStoragePersister = createAsyncStoragePersister({
+  // @ts-expect-error storage type matches
+  storage: storage,
+});
 
 export function Provider({
   children,
@@ -11,25 +28,21 @@ export function Provider({
   const colorScheme = useColorScheme();
 
   return (
-    <TamaguiProvider
-      config={config}
-      defaultTheme={colorScheme === "dark" ? "dark" : "light"}
-      {...rest}
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister: syncStoragePersister }}
     >
-      <ToastProvider
-        swipeDirection="horizontal"
-        duration={6000}
-        native={
-          [
-            // uncomment the next line to do native toasts on mobile. NOTE: it'll require you making a dev build and won't work with Expo Go
-            // 'mobile'
-          ]
-        }
+      <TamaguiProvider
+        config={config}
+        defaultTheme={colorScheme === "dark" ? "dark" : "light"}
+        {...rest}
       >
-        {children}
-        <CurrentToast />
-        <ToastViewport top="$8" left={0} right={0} />
-      </ToastProvider>
-    </TamaguiProvider>
+        <ToastProvider swipeDirection="horizontal" duration={6000}>
+          {children}
+          <CurrentToast />
+          <ToastViewport top="$8" left={0} right={0} />
+        </ToastProvider>
+      </TamaguiProvider>
+    </PersistQueryClientProvider>
   );
 }

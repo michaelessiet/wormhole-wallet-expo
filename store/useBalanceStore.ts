@@ -4,6 +4,7 @@ import useWallet from "hooks/useWallet";
 import { useToastController } from "@tamagui/toast";
 import usePersistState from "hooks/usePersistState";
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function useBalanceStore() {
   const { publicKey } = useWallet();
@@ -12,6 +13,15 @@ export default function useBalanceStore() {
     "balance",
     null,
   );
+  const { isFetching: isFetchingBalance, refetch: refetchBalance } = useQuery({
+    queryKey: ["balance", publicKey],
+    queryFn: fetchBalance,
+    enabled: !!publicKey,
+    refetchInterval: 30000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+  });
 
   const totalUSDBalance = useMemo(() => {
     let usd = balance?.balance.usd ?? 0;
@@ -25,7 +35,7 @@ export default function useBalanceStore() {
 
   async function fetchBalance() {
     if (!publicKey) {
-      return;
+      return false;
     }
 
     try {
@@ -37,17 +47,21 @@ export default function useBalanceStore() {
       });
 
       setBalance(response.data);
+
+      return true;
     } catch (e) {
       toast.show("Error fetching your balance", {
         message: e.message,
-        burntOptions: { haptic: "error", preset: "error" },
+        customData: { type: "error" },
       });
+      return false;
     }
   }
 
   return {
     balance,
-    fetchBalance,
+    fetchBalance: refetchBalance,
+    isFetchingBalance,
     totalUSDBalance,
   };
 }

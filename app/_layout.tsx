@@ -9,17 +9,11 @@ import { useFonts } from "expo-font";
 import { SplashScreen, Stack } from "expo-router";
 import { Provider } from "../components/Provider";
 import { useTheme } from "tamagui";
-import useWallet from "hooks/useWallet";
 
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
 } from "expo-router";
-
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: "(onboarding)",
-};
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -55,21 +49,16 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const theme = useTheme();
-  const { walletExists } = useWallet();
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <StatusBar
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
       />
-      <Stack initialRouteName={walletExists ? "overview" : "(onboarding)"}>
-        <Stack.Screen
-          name="(onboarding)"
-          options={{
-            headerShown: false,
-          }}
-        />
-
+      <Stack
+        initialRouteName={"(onboarding)"}
+        screenOptions={{ headerShown: false }}
+      >
         <Stack.Screen
           name="modal"
           options={{
