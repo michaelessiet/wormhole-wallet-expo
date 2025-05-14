@@ -1,4 +1,5 @@
 import type { ChainName } from "@mayanfinance/swap-sdk";
+import axios from "axios";
 
 export const blockchainsToMayanFinanceChainIds: Record<number, ChainName> = {
   1: "solana",
@@ -25,3 +26,10 @@ export const blockchains: ChainName[] = [
   "solana",
   "sui",
 ];
+
+export const mayanFinanceAPIClient = axios.create({
+  baseURL: "https://explorer-api.mayan.finance/v3",
+});
+
+export const NATIVE_TOKEN_ADDRESS =
+  "0x0000000000000000000000000000000000000000";

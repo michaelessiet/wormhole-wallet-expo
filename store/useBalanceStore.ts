@@ -5,6 +5,7 @@ import { useToastController } from "@tamagui/toast";
 import usePersistState from "hooks/usePersistState";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import Decimal from "decimal.js";
 
 export default function useBalanceStore() {
   const { publicKey } = useWallet();
@@ -13,24 +14,28 @@ export default function useBalanceStore() {
     "balance",
     null,
   );
-  const { isFetching: isFetchingBalance, refetch: refetchBalance } = useQuery({
+  const {
+    isFetching: isFetchingBalance,
+    refetch: refetchBalance,
+    isPending: isLoadingBalance,
+  } = useQuery({
     queryKey: ["balance", publicKey],
     queryFn: fetchBalance,
     enabled: !!publicKey,
-    refetchInterval: 30000,
+    refetchInterval: 60000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchOnMount: false,
   });
 
   const totalUSDBalance = useMemo(() => {
-    let usd = balance?.balance.usd ?? 0;
+    let usd = new Decimal(balance?.balance.usd ?? 0);
 
     for (const token of balance?.tokens ?? []) {
-      usd += token.usd;
+      usd = usd.plus(token.usd);
     }
 
-    return usd;
+    return usd.toNumber();
   }, [balance]);
 
   async function fetchBalance() {
@@ -61,6 +66,7 @@ export default function useBalanceStore() {
   return {
     balance,
     fetchBalance: refetchBalance,
+    isLoadingBalance,
     isFetchingBalance,
     totalUSDBalance,
   };

@@ -1,5 +1,4 @@
 import { XStack } from "tamagui";
-// import ReceiveButton from "./ReceiveButton";
 import { ReceiveButton } from "./ReceiveButton";
 import { SwapButton } from "./SwapButton";
 import SendButton from "./SendButton";

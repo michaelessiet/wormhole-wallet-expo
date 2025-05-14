@@ -1,15 +1,19 @@
 import * as bip39 from "bip39";
 import * as ed25519 from "ed25519-hd-key";
 import {
-  Connection,
+  type Connection,
   Keypair,
   PublicKey,
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
 import bs58 from "bs58";
-import { address } from "gill";
-import { buildTransferTokensTransaction } from "gill/dist/programs/token";
+import {
+  createAssociatedTokenAccountInstruction,
+  createTransferInstruction,
+  getAssociatedTokenAddressSync,
+  getMint,
+} from "@solana/spl-token";
 
 export function generateMnemonic(strength: 128 | 256 = 128): string {
   return bip39.generateMnemonic(strength);
@@ -59,57 +63,74 @@ export async function generateSolTransferTransaction(
   return transaction;
 }
 
-export async function generateSPLTransferTransactionWithGill(
+export async function generateSPLTransferTransaction(
   amount: number,
-  fromSigner: Keypair, // Gill uses KeyPairSigner
-  toAddress: string,
-  mintAddress: string,
-  solanaClient: Connection, // Gill's client
-): Promise<TransactionMessageWithBlockhashLifetime> {
-  const to = address(toAddress); // Convert string to Gill's address type
-  const mint = address(mintAddress); // Convert string to Gill's address type
+  from: Keypair,
+  to: string,
+  mint: string,
+  connection: Connection,
+): Promise<Transaction> {
+  const fromPublicKey = from.publicKey;
+  const toPublicKey = new PublicKey(to);
+  const mintPublicKey = new PublicKey(mint);
 
-  // 1. Fetch mint information to get decimals
-  // We'll use the rpc instance from the solanaClient
-  const mintInfo = await getMint(solanaClient.rpc, mint);
+  const mintInfo = await getMint(connection, mintPublicKey);
   const decimals = mintInfo.decimals;
 
-  // 2. Calculate the amount in the smallest token unit
-  const amountInSmallestUnit = BigInt(
-    Math.round(amount * Math.pow(10, decimals)),
-  );
+  const amountInSmallestUnit = BigInt(Math.round(amount * 10 ** decimals));
 
   if (amountInSmallestUnit <= 0) {
     throw new Error("Transfer amount must be greater than 0.");
   }
 
-  // 3. Get the latest blockhash
-  const latestBlockhash = await solanaClient.rpc.getLatestBlockhash().send();
+  const fromAta = getAssociatedTokenAddressSync(
+    mintPublicKey,
+    fromPublicKey,
+    false, // allowOwnerOffCurve - typically false for wallet addresses
+  );
 
-  // 4. Build the transfer tokens transaction using Gill's builder [5, 6]
-  // This builder handles ATA creation for the recipient if needed.
-  const transactionMessage = buildTransferTokensTransaction({
-    mint,
-    destination: to,
-    amount: amountInSmallestUnit,
-    authority: fromSigner, // The sender's KeyPairSigner acts as the authority
-    payer: fromSigner, // The sender will pay for the transaction fees (and potential ATA creation)
-    // fundRecipient: true, // This is often true by default or handled internally if ATA needs creation
-    // The `buildTransferTokensTransaction` will determine the source ATA from the `authority` and `mint`.
-  });
+  const toAta = getAssociatedTokenAddressSync(
+    mintPublicKey,
+    toPublicKey,
+    false, // allowOwnerOffCurve
+  );
 
-  // 5. Set the transaction lifetime using the blockhash
-  const transactionMessageWithLifetime: TransactionMessageWithBlockhashLifetime =
-    {
-      ...transactionMessage,
-      lifetimeConstraint: {
-        blockhash: latestBlockhash.blockhash,
-        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-      },
-    };
+  const transaction = new Transaction();
 
-  // The transaction message is now ready to be signed and sent.
-  // To sign: `const signedTransaction = await signTransactionMessageWithSigners(transactionMessageWithLifetime, [fromSigner]);`
-  // To send: `const signature = await solanaClient.sendAndConfirmTransaction(signedTransaction);`
-  return transactionMessageWithLifetime;
+  const recipientAtaInfo = await connection.getAccountInfo(toAta);
+  if (!recipientAtaInfo) {
+    transaction.add(
+      createAssociatedTokenAccountInstruction(
+        fromPublicKey,
+        toAta,
+        toPublicKey,
+        mintPublicKey,
+      ),
+    );
+  }
+
+  transaction.add(
+    createTransferInstruction(
+      fromAta,
+      toAta,
+      fromPublicKey,
+      amountInSmallestUnit,
+      [],
+    ),
+  );
+
+  const { blockhash } = await connection.getLatestBlockhash();
+
+  transaction.feePayer = fromPublicKey;
+  transaction.recentBlockhash = blockhash;
+
+  return transaction;
+}
+
+export function truncateAddress(address: string, start = 4, end = 4): string {
+  if (address.length <= start + end) {
+    return address;
+  }
+
+  return `${address.slice(0, start)}...${address.slice(-end)}`;
 }

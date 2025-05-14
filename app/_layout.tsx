@@ -62,7 +62,22 @@ function RootLayoutNav() {
         <Stack.Screen
           name="modal"
           options={{
-            title: "Tamagui + Expo",
+            headerShown: true,
+            title: "Settings",
+            presentation: "modal",
+            animation: "slide_from_right",
+            gestureEnabled: true,
+            gestureDirection: "horizontal",
+            contentStyle: {
+              backgroundColor: theme.background.val,
+            },
+          }}
+        />
+        <Stack.Screen
+          name="history"
+          options={{
+            headerShown: true,
+            title: "History",
             presentation: "modal",
             animation: "slide_from_right",
             gestureEnabled: true,

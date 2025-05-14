@@ -1,12 +1,9 @@
 import FastImage from "@d11/react-native-fast-image";
 import { LegendList } from "@legendapp/list";
-import { ChainName } from "@mayanfinance/swap-sdk";
-import {
-  blockchains,
-  blockchainsToMayanFinanceChainIds,
-} from "constants/mayanFinance";
+import { NATIVE_TOKEN_ADDRESS } from "constants/mayanFinance";
 import useMayanFinance from "hooks/useMayanFinance";
-import { useEffect } from "react";
+import { useMemo } from "react";
+import useBalanceStore from "store/useBalanceStore";
 import {
   Adapt,
   Button,
@@ -26,16 +23,25 @@ export function SwapForm() {
     fromToken,
     setFromToken,
     toAmount,
-    setToChain,
     toToken,
     setToToken,
     toTokens,
     toChain,
     swap,
     txFee,
+    eta,
   } = useMayanFinance();
+  const { balance } = useBalanceStore();
 
-  // swap form in tamagui
+  const selectedTokenBalance = useMemo(() => {
+    if (fromToken === NATIVE_TOKEN_ADDRESS) return balance?.balance.ether;
+
+    const token = balance?.tokens.find(
+      (v) => v.address.toLowerCase() === fromToken?.toLowerCase(),
+    );
+    return token?.balance;
+  }, [fromToken, balance]);
+
   return (
     <YStack p="$4" justify={"center"} height={"100%"} gap={"$2"}>
       <Text>From</Text>
@@ -69,7 +75,7 @@ export function SwapForm() {
                 value={token.mint}
               >
                 <Select.ItemText>
-                  <XStack>
+                  <XStack gap={"$2"}>
                     <FastImage
                       source={{ uri: token.logoURI }}
                       style={{ width: 30, height: 30, borderRadius: 100 }}
@@ -88,60 +94,28 @@ export function SwapForm() {
         </Select.Content>
       </Select>
 
-      <Input
-        value={fromAmount}
-        // @ts-expect-error - is going to be of type number
-        onChangeText={(text) => setFromAmount(`${text}`)}
-        placeholder="0.00"
-        keyboardType="numeric"
-      />
+      <YStack>
+        <Input
+          value={fromAmount}
+          // @ts-expect-error - is going to be of type number
+          onChangeText={(text) => setFromAmount(`${text}`)}
+          placeholder="0.00"
+          keyboardType="numeric"
+        />
+        <Text
+          fontSize="$2"
+          opacity={0.8}
+          fontWeight="500"
+          p={"$2"}
+          self={"flex-end"}
+        >
+          {selectedTokenBalance
+            ? `Balance: ${Number(selectedTokenBalance).toLocaleString()}`
+            : null}
+        </Text>
+      </YStack>
 
       <Text>To</Text>
-
-      <Select
-        value={toChain}
-        onValueChange={(chain) => setToChain(chain as ChainName)}
-      >
-        <Select.Trigger>
-          <Select.Value placeholder="Select a chain" />
-        </Select.Trigger>
-
-        <Adapt when="maxMd" platform="touch">
-          <Sheet modal dismissOnSnapToBottom animation="medium">
-            <Sheet.Frame>
-              <Sheet.ScrollView>
-                <Adapt.Contents />
-              </Sheet.ScrollView>
-            </Sheet.Frame>
-            <Sheet.Overlay
-              bg="$shadowColor"
-              animation="lazy"
-              enterStyle={{ opacity: 0 }}
-              exitStyle={{ opacity: 0 }}
-            />
-          </Sheet>
-        </Adapt>
-
-        <Select.Content>
-          <Select.Viewport>
-            <LegendList
-              data={blockchains}
-              keyExtractor={(chain, i) => chain + i.toString()}
-              renderItem={({ item: chain, index: i }) => (
-                <Select.Item index={i} value={chain}>
-                  <Select.ItemText>
-                    <XStack gap={"$2"}>
-                      <YStack>
-                        <Text>{chain}</Text>
-                      </YStack>
-                    </XStack>
-                  </Select.ItemText>
-                </Select.Item>
-              )}
-            />
-          </Select.Viewport>
-        </Select.Content>
-      </Select>
 
       <Select value={toToken} onValueChange={setToToken}>
         <Select.Trigger>
@@ -204,6 +178,7 @@ export function SwapForm() {
       />
 
       <Text>Bridge Fee: {txFee === "0" ? "Free" : txFee}</Text>
+      <Text>Estimated time: {eta ?? 0} seconds</Text>
 
       <Button onPress={async () => await swap()}>Swap</Button>
     </YStack>

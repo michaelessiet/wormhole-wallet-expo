@@ -1,12 +1,10 @@
 import FastImage from "@d11/react-native-fast-image";
 import { LegendList } from "@legendapp/list";
 import type { ChainName } from "@mayanfinance/swap-sdk";
-import {
-  blockchains,
-  blockchainsToMayanFinanceChainIds,
-} from "constants/mayanFinance";
+import { blockchains, NATIVE_TOKEN_ADDRESS } from "constants/mayanFinance";
 import useMayanFinance from "hooks/useMayanFinance";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import useBalanceStore from "store/useBalanceStore";
 import {
   Adapt,
   Button,
@@ -36,6 +34,16 @@ export default function SendForm() {
     eta,
   } = useMayanFinance();
   const [toAddress, setToAddress] = useState("");
+  const { balance } = useBalanceStore();
+
+  const selectedTokenBalance = useMemo(() => {
+    if (fromToken === NATIVE_TOKEN_ADDRESS) return balance?.balance.ether;
+
+    const token = balance?.tokens.find(
+      (v) => v.address.toLowerCase() === fromToken?.toLowerCase(),
+    );
+    return token?.balance;
+  }, [fromToken, balance]);
 
   return (
     <YStack p="$4" justify={"center"} height={"100%"} gap={"$2"}>
@@ -70,7 +78,7 @@ export default function SendForm() {
                 value={token.mint}
               >
                 <Select.ItemText>
-                  <XStack>
+                  <XStack gap={"$2"}>
                     <FastImage
                       source={{ uri: token.logoURI }}
                       style={{ width: 30, height: 30, borderRadius: 100 }}
@@ -89,13 +97,26 @@ export default function SendForm() {
         </Select.Content>
       </Select>
 
-      <Input
-        value={fromAmount}
-        // @ts-expect-error - is going to be of type number
-        onChangeText={(text) => setFromAmount(`${text}`)}
-        placeholder="0.00"
-        keyboardType="numeric"
-      />
+      <YStack>
+        <Input
+          value={fromAmount}
+          // @ts-expect-error - is going to be of type number
+          onChangeText={(text) => setFromAmount(`${text}`)}
+          placeholder="0.00"
+          keyboardType="numeric"
+        />
+        <Text
+          fontSize="$2"
+          opacity={0.8}
+          fontWeight="500"
+          p={"$2"}
+          self={"flex-end"}
+        >
+          {selectedTokenBalance
+            ? `Balance: ${Number(selectedTokenBalance).toLocaleString()}`
+            : null}
+        </Text>
+      </YStack>
 
       <Text>To</Text>
 
@@ -213,7 +234,7 @@ export default function SendForm() {
       <Text>Bridge Fee: {txFee === "0" ? "Free" : txFee}</Text>
       <Text>Estimated time: {eta ?? 0} seconds</Text>
 
-      <Button onPress={async () => await swap(toAddress)}>Swap</Button>
+      <Button onPress={async () => await swap(toAddress)}>Send</Button>
     </YStack>
   );
 }

@@ -35,14 +35,11 @@ export default function useWallet() {
   }, [privateKey]);
 
   const walletExists = useMemo(() => {
-    if (mnemonic) {
-      return true;
-    }
     if (privateKey) {
       return true;
     }
     return false;
-  }, [mnemonic, privateKey]);
+  }, [privateKey]);
 
   const publicKey = useMemo(() => {
     if (keyPair) {
@@ -50,6 +47,14 @@ export default function useWallet() {
     }
     return null;
   }, [keyPair]);
+
+  function clearWallet() {
+    setMnemonic(undefined);
+    setPrivateKey(undefined);
+    toast.show("Wallet cleared", {
+      customData: { type: "success" },
+    });
+  }
 
   function generateWallet() {
     try {
@@ -82,13 +87,23 @@ export default function useWallet() {
     }
   }
 
-  function signTransaction(tx: VersionedTransaction | Transaction) {
+  const connection = useMemo(() => {
+    if (process.env.EXPO_PUBLIC_RPC_URL) {
+      return new Connection(process.env.EXPO_PUBLIC_RPC_URL);
+    }
+    return new Connection("https://api.mainnet-beta.solana.com");
+  }, []);
+
+  function signTransaction(
+    tx: VersionedTransaction | Transaction,
+    extraSigners?: Keypair[],
+  ) {
     if (!keyPair) {
       throw new Error("Wallet not initialized");
     }
 
     if (tx instanceof VersionedTransaction) {
-      tx.sign([keyPair]);
+      tx.sign([...(extraSigners ?? []), keyPair]);
     } else {
       tx.partialSign(keyPair);
     }
@@ -100,10 +115,6 @@ export default function useWallet() {
     if (!keyPair) {
       throw new Error("Wallet not initialized");
     }
-
-    const connection = new Connection(
-      process.env.EXPO_PUBLIC_RPC_URL as string,
-    );
 
     const txSignature = await tryAsync(
       async () => await connection.sendRawTransaction(tx.serialize()),
@@ -130,7 +141,7 @@ export default function useWallet() {
       return;
     }
 
-    return txState.value.value;
+    return txSignature.value;
   }
 
   return {
@@ -144,5 +155,7 @@ export default function useWallet() {
     walletExists,
     publicKey,
     generateWallet,
+    connection,
+    clearWallet,
   };
 }

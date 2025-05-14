@@ -2,6 +2,8 @@ import { ArrowUpRight } from "@tamagui/lucide-icons";
 import { Button, Sheet } from "tamagui";
 import { useState } from "react";
 import SendForm from "./SendForm";
+import { ToastProvider } from "@tamagui/toast";
+import { CurrentToast } from "components/CurrentToast";
 
 export default function SendButton() {
   const [sheetState, setSheetState] = useState(false);
@@ -17,12 +19,17 @@ export default function SendButton() {
         snapPointsMode="fit"
         onOpenChange={setSheetState}
         modal
+        moveOnKeyboardChange
+        dismissOnSnapToBottom
       >
         <Sheet.Overlay bg={"$accent10"} opacity={0.2} />
         <Sheet.Handle />
 
         <Sheet.Frame>
-          <SendForm />
+          <ToastProvider>
+            <CurrentToast />
+            <SendForm />
+          </ToastProvider>
         </Sheet.Frame>
       </Sheet>
     </>
